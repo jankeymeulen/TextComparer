@@ -6,4 +6,4 @@ Graphical interface which allows easy navigation between corresponding parts in 
 
 Probably very much can be done to improve this program and the algorithm which it uses.
 
-![screenshot](https://jankeymeulen.github.com/TextComparer/screenshot.png)
+![screenshot](https://raw.githubusercontent.com/jankeymeulen/TextComparer/master/screenshot.png)
