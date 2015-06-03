@@ -1,0 +1,80 @@
+package e.ptextarea;
+
+import e.util.*;
+import java.util.*;
+import java.util.regex.*;
+
+/**
+ * Styles any chunk of text matching a regular expression. Capturing group 1 is
+ * used as the range to be styled.
+ */
+public class RegularExpressionStyleApplicator implements StyleApplicator {
+    protected final PTextArea textArea;
+    private final Pattern pattern;
+    private final PStyle style;
+    
+    public RegularExpressionStyleApplicator(PTextArea textArea, Pattern pattern, PStyle style) {
+        this.textArea = textArea;
+        this.pattern = pattern;
+        this.style = style;
+    }
+    
+    public RegularExpressionStyleApplicator(PTextArea textArea, String regularExpression, PStyle style) {
+        this(textArea, Pattern.compile(regularExpression), style);
+    }
+    
+    public List<PLineSegment> applyStylingTo(String line, PLineSegment segment) {
+        ArrayList<PLineSegment> result = new ArrayList<PLineSegment>();
+        Matcher matcher = pattern.matcher(segment.getCharSequence());
+        int normalStart = 0;
+        int offset = segment.getOffset();
+        while (matcher.find()) {
+            if (isAcceptableMatch(line, matcher)) {
+                // We need exactly one group, but we accept more in case the user has used extra groups without making them non-capturing.
+                if (matcher.groupCount() < 1) {
+                    Log.warn("RegularExpressionStyleApplicator for \"" + pattern + "\" disabled because it has no capturing group.");
+                }
+                final int matchStart = matcher.start(1);
+                final int matchEnd = matcher.end(1);
+                if (matchStart > normalStart) {
+                    result.add(segment.subSegment(normalStart, matchStart));
+                }
+                result.add(makeNewSegment(textArea, matcher, offset + matchStart, offset + matchEnd, style));
+                normalStart = matchEnd;
+            }
+        }
+        if (segment.getModelTextLength() > normalStart) {
+            result.add(segment.subSegment(normalStart));
+        }
+        return result;
+    }
+    
+    protected PLineSegment makeNewSegment(PTextArea textArea, Matcher matcher, int start, int end, PStyle style) {
+        PTextSegment result = new PTextSegment(textArea, start, end, style);
+        if (style == PStyle.HYPERLINK) {
+            configureSegment(result, matcher);
+        }
+        return result;
+    }
+    
+    /**
+     * Override this if you need to make a test that you can't express in the
+     * regular expression. The keyword styler, for example, uses a regular
+     * expression that matches any word and then checks whether the word is
+     * a keyword here. That works around Java 1.5 performance problems with
+     * regular expressions that are long sequences like "a|b|...|y|z".
+     */
+    public boolean isAcceptableMatch(CharSequence line, Matcher matcher) {
+        return true;
+    }
+    
+    public boolean canApplyStylingTo(PStyle style) {
+        return (style == PStyle.NORMAL);
+    }
+    
+    /**
+     * Override this to configure each matching text segment.
+     */
+    protected void configureSegment(PTextSegment segment, Matcher matcher) {
+    }
+}
